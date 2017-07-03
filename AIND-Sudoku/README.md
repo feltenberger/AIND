@@ -10,7 +10,7 @@ A:
 
 # Question 2 (Diagonal Sudoku)
 Q: How do we use constraint propagation to solve the diagonal sudoku problem?  
-A: When considering the constraints in e.g. eliminate(), naked_twins(), and only_choice(), we include thediagonal units in our set of constraints.
+A: First, we identify the diagonal units. We include these diagonal units (along with the row/column/square units) in eliminate(), naked_twins(), and only_choice() as additional constraints for the problem. Adding the diagonal units reduces the number of possible states by adding additional constraints.
 
 ### Install
 
