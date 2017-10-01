@@ -186,14 +186,6 @@ class SelectorCV(ModelSelector):
 
                 if (score > best_score):
                     best_score = score
-
-                    #ghmm = GaussianHMM(
-                    #    n_components=n, 
-                    #    covariance_type="diag", 
-                    #    n_iter=1000,
-                    #    random_state=self.random_state, 
-                    #    verbose=False)
-                    #fit_hmm_model = ghmm.fit(self.X, self.lengths)
                     best_hmm_model = fit_hmm_model
             except Exception as e:
                 #print(e)
