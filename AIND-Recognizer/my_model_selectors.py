@@ -76,8 +76,33 @@ class SelectorBIC(ModelSelector):
         """
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-        # TODO implement model selection based on BIC scores
-        raise NotImplementedError
+        bic_score = float("-inf")
+        best_hmm_model = None
+
+        for n in range(self.min_n_components, self.max_n_components + 1):
+
+            try:
+                ghmm = GaussianHMM(
+                    n_components=n, 
+                    covariance_type="diag", 
+                    n_iter=1000,
+                    random_state=self.random_state, 
+                    verbose=False)
+                fit_hmm_model = ghmm.fit(self.X, self.lengths)
+
+                logL = fit_hmm_model.score(self.X, self.lengths)
+
+                p = n * (n-1) + 2 * n * len(self.X[0])
+                score = -2 * logL + p * math.log(n)
+
+                if (score > bic_score):
+                    bic_score = score
+                    best_hmm_model = fit_hmm_model
+            except Exception as e:
+                #print(e)
+                pass
+
+        return best_hmm_model
 
 
 class SelectorDIC(ModelSelector):
@@ -93,9 +118,37 @@ class SelectorDIC(ModelSelector):
     def select(self):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-        # TODO implement model selection based on DIC scores
-        raise NotImplementedError
+        best_score = float("-inf")
+        best_hmm_model = None
 
+        for n in range(self.min_n_components, self.max_n_components + 1):
+            try:
+                ghmm = GaussianHMM(
+                    n_components=n, 
+                    covariance_type="diag", 
+                    n_iter=1000,
+                    random_state=self.random_state, 
+                    verbose=False)
+
+                fit_hmm_model = ghmm.fit(self.X, self.lengths)
+
+                logL = fit_hmm_model.score(self.X, self.lengths)
+                other_scores = []
+
+                for word in self.hwords:
+                    word_x, word_lengths = self.hwords[word]
+                    other_scores.append(fit_hmm_model.score(word_x, word_lengths))
+
+                score = logL - np.mean(other_scores)
+
+                if (score > best_score):
+                    best_score = score
+                    best_hmm_model = fit_hmm_model
+            except Exception as e:
+                #print(e)
+                pass
+        
+        return best_hmm_model
 
 class SelectorCV(ModelSelector):
     ''' select best model based on average log Likelihood of cross-validation folds
@@ -105,5 +158,45 @@ class SelectorCV(ModelSelector):
     def select(self):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-        # TODO implement model selection using CV
-        raise NotImplementedError
+        best_score = float("-inf")
+        best_hmm_model = None
+        split_method = KFold(n_splits=2)
+
+        for n in range(self.min_n_components, self.max_n_components + 1):
+            score = 0
+
+            try:
+                for cv_train_idx, cv_test_idx in split_method.split(self.sequences):
+
+                    split_train_x, split_train_lengths = combine_sequences(cv_train_idx, self.sequences)
+
+                    ghmm = GaussianHMM(
+                        n_components=n, 
+                        covariance_type="diag", 
+                        n_iter=1000,
+                        random_state=self.random_state, 
+                        verbose=False)
+
+                    fit_hmm_model = ghmm.fit(split_train_x, split_train_lengths)
+
+                    split_test_x, split_test_lengths = combine_sequences(cv_test_idx, self.sequences)
+                    logL = fit_hmm_model.score(split_test_x, split_test_lengths)
+
+                    score = score + logL
+
+                if (score > best_score):
+                    best_score = score
+
+                    #ghmm = GaussianHMM(
+                    #    n_components=n, 
+                    #    covariance_type="diag", 
+                    #    n_iter=1000,
+                    #    random_state=self.random_state, 
+                    #    verbose=False)
+                    #fit_hmm_model = ghmm.fit(self.X, self.lengths)
+                    best_hmm_model = fit_hmm_model
+            except Exception as e:
+                #print(e)
+                pass
+
+        return best_hmm_model
